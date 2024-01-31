@@ -34,6 +34,7 @@ config = SimpleNamespace(
     max_seq_length=1024,
     max_steps=-1,
     save=True,
+    log_model=True,
     eval=True,
 )
 
@@ -112,3 +113,13 @@ if config.eval:
     trainer.evaluate()
 if config.save:
     trainer.save_model(training_args.output_dir)
+
+if config.log_model and config.save:
+    print("Saving model as artifact to wandb")
+    model_at = wandb.Artifact(
+        name = f"{wandb.run.id}_alpaca_{config.n_layers}_layers", 
+        type="model",
+        description="Model trained on Alpaca GPT4 dataset",
+        metadata={"finetuned_from":config.model_id})
+    model_at.add_dir(training_args.output_dir)
+    wandb.log_artifact(model_at)
