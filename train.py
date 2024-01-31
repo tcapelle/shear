@@ -34,6 +34,7 @@ class Config(simple_parsing.Serializable):
     seed: int = 42
     max_seq_length: int = 1024
     max_steps: int = -1
+    num_train_epochs: int = 3
     save: bool = True
     log_model: bool = True
     eval: bool = True
@@ -76,6 +77,7 @@ training_args = TrainingArguments(
     lr_scheduler_type="cosine",
     warmup_ratio=0.1,
     max_steps=config.max_steps,
+    num_train_epochs=config.num_train_epochs,
     gradient_accumulation_steps=config.gradient_accumulation_steps,
     evaluation_strategy="no",
     # logging strategies
