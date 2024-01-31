@@ -1,0 +1,8 @@
+wandb
+transformers
+peft
+bitsandbytes
+accelerate
+datasets
+evaluate
+trl>=0.7
