@@ -1,0 +1,7 @@
+models/
+wandb/
+artifacts/
+*egg*
+*cache*
+*checkpoint*
+*tfevent*
