@@ -1,16 +1,16 @@
 import wandb
-from types import SimpleNamespace
-from datasets import load_dataset
-from accelerate import Accelerator
+from dataclasses import dataclass
+import simple_parsing
 
 import torch
 import torch.nn as nn
 
+from accelerate import Accelerator
+from datasets import load_dataset
 from transformers import TrainingArguments, AutoModelForCausalLM, TrainerCallback
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
-
 from trl import SFTTrainer
-from utils import parse_args
+
 from data import create_alpaca_prompt_with_response
 
 
@@ -22,24 +22,24 @@ DATASET_NAME = "vicgalle/alpaca-gpt4"
 MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
-config = SimpleNamespace(
-    resume_from_checkpoint=LAST_CHECKPOINT,  # uses LAST Checkpoint from W&B
-    torch_compile=False,
-    batch_size=2,
-    learning_rate=1e-4,
-    gradient_accumulation_steps=8,
-    n_layers=12,
-    test_size=0.05,
-    seed=42,
-    max_seq_length=1024,
-    max_steps=-1,
-    save=True,
-    log_model=True,
-    eval=True,
-    tag="alpaca,12_layers"
-)
+@dataclass
+class Config(simple_parsing.Serializable):
+    resume_from_checkpoint: str = LAST_CHECKPOINT
+    torch_compile: bool = False
+    batch_size: int = 2
+    learning_rate: float = 1e-4
+    gradient_accumulation_steps: int = 8
+    n_layers: int = 12
+    test_size: float = 0.05
+    seed: int = 42
+    max_seq_length: int = 1024
+    max_steps: int = -1
+    save: bool = True
+    log_model: bool = True
+    eval: bool = True
+    tag: str = "alpaca,12_layers"
 
-parse_args(config)
+config: Config = simple_parsing.parse(Config)
 
 accelerator = Accelerator()
 
