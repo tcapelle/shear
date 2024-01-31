@@ -115,10 +115,11 @@ trainer.train(resume_from_checkpoint=config.resume_from_checkpoint)
 
 if config.eval:
     trainer.evaluate()
-if config.save:
+    
+if config.save and accelerator.is_main_process:
     trainer.save_model(training_args.output_dir)
 
-if config.log_model and config.save:
+if config.log_model and config.save and accelerator.is_main_process:
     print("Saving model as artifact to wandb")
     model_at = wandb.Artifact(
         name = f"{wandb.run.id}_alpaca_{config.n_layers}_layers", 
