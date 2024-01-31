@@ -36,6 +36,7 @@ config = SimpleNamespace(
     save=True,
     log_model=True,
     eval=True,
+    tag="alpaca,12_layers"
 )
 
 parse_args(config)
@@ -46,7 +47,8 @@ if accelerator.is_main_process:
     wandb.init(project=WANDB_PROJECT, 
                entity=ENTITY, 
                job_type="train", 
-               config={"init_args": config})
+               config={"init_args": config},
+               tags=config.tag.split(","))
     # estimation
     effective_batch_size = config.max_seq_length*config.batch_size*config.gradient_accumulation_steps*accelerator.num_processes
     print(f"\nTraining with an effective batch_size of: {effective_batch_size}\n")
