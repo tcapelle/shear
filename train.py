@@ -19,7 +19,7 @@ ENTITY = "capecape"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 DATASET_NAME = "vicgalle/alpaca-gpt4"
 # MODEL_ID = "mistralai/Mistral-7B-v0.1"
-MODEL_ID = "./mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
 config = SimpleNamespace(
@@ -60,7 +60,7 @@ else:
     test_ds = None
 
 
-output_dir = f"./output/mistral_7b_{config.n_layers}_layers"
+output_dir = f"./models/mistral_7b_{config.n_layers}_layers"
 training_args = TrainingArguments(
     output_dir=output_dir,
     per_device_train_batch_size=config.batch_size,
