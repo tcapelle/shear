@@ -12,24 +12,25 @@ from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from trl import SFTTrainer
 
 from data import create_alpaca_prompt_with_response
-
+from utils import freeze
 
 WANDB_PROJECT = "shearllama"
 ENTITY = "capecape"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 DATASET_NAME = "vicgalle/alpaca-gpt4"
-# MODEL_ID = "mistralai/Mistral-7B-v0.1"
-MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+MODEL_ID = "mistralai/Mistral-7B-v0.1"
+# MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
 @dataclass
 class Config(simple_parsing.Serializable):
     resume_from_checkpoint: str = LAST_CHECKPOINT
     torch_compile: bool = False
-    batch_size: int = 2
+    batch_size: int = 1
     learning_rate: float = 1e-4
-    gradient_accumulation_steps: int = 8
-    n_layers: int = 12
+    gradient_accumulation_steps: int = 16
+    n_layers: int = None
+    n_freeze: int = 24
     test_size: float = 0.05
     seed: int = 42
     max_seq_length: int = 1024
@@ -38,7 +39,7 @@ class Config(simple_parsing.Serializable):
     save: bool = True
     log_model: bool = True
     eval: bool = True
-    tag: str = "alpaca,12_layers"
+    tag: str = "alpaca,baseline7b"
 
 config: Config = simple_parsing.parse(Config)
 
@@ -97,8 +98,12 @@ model = AutoModelForCausalLM.from_pretrained(
         )
 
 # Chop the model down to n_layers
-model.model.layers = model.model.layers[:config.n_layers]
-# freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
+if config.n_layers: 
+    model.model.layers = model.model.layers[:config.n_layers]
+
+# freeze layers
+if config.n_freeze:
+    freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
 
 
 trainer = SFTTrainer(
@@ -115,7 +120,7 @@ trainer.train(resume_from_checkpoint=config.resume_from_checkpoint)
 
 if config.eval:
     trainer.evaluate()
-    
+
 if config.save and accelerator.is_main_process:
     trainer.save_model(training_args.output_dir)
 
