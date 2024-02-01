@@ -14,3 +14,9 @@ def create_alpaca_prompt(row):
 def create_alpaca_prompt_with_response(row):
     instruct = _prompt_no_input(row) if row["input"] == "" else _prompt_input(row)
     return instruct + row["output"]
+
+def create_chatml_fromvalue(tokenizer, key='conversations'):
+    # expects row['conversations'] is of the form [ {'from': '...', 'value': '...'}, ... ]
+    def apply_template(x):
+        return tokenizer.apply_chat_template(x[key], add_generation_prompt=False, tokenize=False)
+    return apply_template
