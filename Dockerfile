@@ -7,6 +7,8 @@ FROM winglian/axolotl:main-py3.11-cu121-2.1.2
 
 WORKDIR /workspace
 
+RUN git config --global --add safe.directory /workspace/shear
+
 COPY requirements.txt .
 
 RUN python -m pip install -r requirements.txt
