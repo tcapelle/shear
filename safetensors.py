@@ -7,6 +7,7 @@ from itertools import chain
 from safetensors import safe_open
 from safetensors.torch import save_file
 
+
 def natural_sort(xs, key=lambda s:s):
     """
     Sort the list into natural alphanumeric order.
@@ -30,7 +31,6 @@ def split_safetensors(dir_from, dir_to='layers', device='cuda', dtype=torch.bflo
     order = []
     tensors = list(glob.iglob(f'{dir_from}/*.safetensors'))
     fmt = lambda x : f"{x:05d}" # hard-coded... might be internal to hf...
-
 
     # determine # of tensors and key names
     for tensor in tensors:
