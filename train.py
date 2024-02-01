@@ -119,14 +119,26 @@ if config.n_layers:
 if config.n_freeze:
     freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
 
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+
 # 💭 perhaps we move this config ugliness somewhere else ?
 # TODO: make configuration modular...
-tokenizer.pad_token = '<unk>' # '\0'
-tokenizer.add_bos_token = False
-tokenizer.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'gpt\n' }}{% endif %}"
+chat_template = (
+    "{% if not add_generation_prompt is defined %}"
+    "{% set add_generation_prompt = false %}{% endif %}"
+    "{% for message in messages %}"
+    "{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}"
+    "{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'assistant\n' }}{% endif %}"
+)
 
-formatting_func = create_chatml_fromvalue(tokenizer, key='conversations') if CHATML else create_alpaca_prompt_with_response
+tokenizer = AutoTokenizer.from_pretrained(
+    model_id,
+    pad_token='<unk>', # change for non llama/mistral tokenizers
+    add_bos_token=False,
+    chat_template=chat_template,
+)
+
+formatting_func = create_chatml_fromvalue(tokenizer) if CHATML else create_alpaca_prompt_with_response
+
 
 trainer = SFTTrainer(
     model,
