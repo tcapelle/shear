@@ -131,7 +131,7 @@ chat_template = (
 )
 
 tokenizer = AutoTokenizer.from_pretrained(
-    model_id,
+    config.model_id,
     pad_token='<unk>', # change for non llama/mistral tokenizers
     add_bos_token=False,
     chat_template=chat_template,
