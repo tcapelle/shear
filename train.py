@@ -1,4 +1,5 @@
 import wandb
+import logging
 from dataclasses import dataclass
 import simple_parsing
 
@@ -13,6 +14,8 @@ from trl import SFTTrainer
 
 from data import create_alpaca_prompt_with_response
 from utils import freeze
+
+logging.basicConfig(level=logging.INFO)
 
 WANDB_PROJECT = "shearllama"
 ENTITY = "capecape"
@@ -42,6 +45,7 @@ class Config(simple_parsing.Serializable):
     eval: bool = True
     tags: str = "alpaca,12layers"
 
+
 config: Config = simple_parsing.parse(Config)
 
 accelerator = Accelerator()
@@ -54,7 +58,7 @@ if accelerator.is_main_process:
                tags=config.tags.split(","))
     # estimation
     effective_batch_size = config.max_seq_length*config.batch_size*config.gradient_accumulation_steps*accelerator.num_processes
-    print(f"\nTraining with an effective batch_size of: {effective_batch_size}\n")
+    logging.info(f"\nTraining with an effective batch_size of: {effective_batch_size}\n")
 
 ds = load_dataset(DATASET_NAME)["train"].shuffle(seed=config.seed)
 if config.test_size>0:
@@ -119,17 +123,19 @@ trainer = SFTTrainer(
 trainer.train(resume_from_checkpoint=config.resume_from_checkpoint)
 
 if config.save and accelerator.is_main_process:
+    logging.info(f"Saving model to {training_args.output_dir}")
     trainer.save_model(training_args.output_dir)
 
 if config.eval:
+    logging.info("Evaluating model")
     trainer.evaluate()
 
 if config.log_model and config.save and accelerator.is_main_process:
-    print("Saving model as artifact to wandb")
+    logging.info("Saving model as artifact to wandb")
     model_at = wandb.Artifact(
         name = f"mistral_7b_{config.n_layers}_layers-{wandb.run.id}", 
         type="model",
         description="Model trained on Alpaca GPT4 dataset",
-        metadata=config )
+        metadata=config.to_dict())
     model_at.add_dir(training_args.output_dir)
     wandb.log_artifact(model_at)
