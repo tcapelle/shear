@@ -20,11 +20,15 @@ logging.basicConfig(level=logging.INFO)
 WANDB_PROJECT = "shearllama"
 ENTITY = "capecape"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
-DATASET_NAME = "vicgalle/alpaca-gpt4"
-# MODEL_ID = "mistralai/Mistral-7B-v0.1"
-MODEL_ID = "NousResearch/Llama-2-7b-hf"
+# DATASET_NAME = "vicgalle/alpaca-gpt4"
+DATASET_SIZE = 50 # other options: 100 200
+DATASET_NAME = f"typeof/OH-2.5-{DATASET_SIZE}k"
+MODEL_ID = "mistralai/Mistral-7B-v0.1"
+# MODEL_ID = "NousResearch/Llama-2-7b-hf"
 # MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
+
+CHATML = True
 
 @dataclass
 class Config(simple_parsing.Serializable):
@@ -115,12 +119,21 @@ if config.n_layers:
 if config.n_freeze:
     freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
 
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+# 💭 perhaps we move this config ugliness somewhere else ?
+# TODO: make configuration modular...
+tokenizer.pad_token = '<unk>' # '\0'
+tokenizer.add_bos_token = False
+tokenizer.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'assistant\n' }}{% endif %}"
+
+formatting_func = create_chatml_fromvalue(tokenizer, key='conversations') if CHATML else create_alpaca_prompt_with_response
 
 trainer = SFTTrainer(
     model,
+    tokenizer=tokenizer,
     train_dataset=train_ds,
     eval_dataset=test_ds,
-    formatting_func=create_alpaca_prompt_with_response,
+    formatting_func=formatting_func,
     max_seq_length=config.max_seq_length,
     packing=True,
     args=training_args,
