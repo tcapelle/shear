@@ -18,19 +18,20 @@ WANDB_PROJECT = "shearllama"
 ENTITY = "capecape"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 DATASET_NAME = "vicgalle/alpaca-gpt4"
-MODEL_ID = "mistralai/Mistral-7B-v0.1"
-# MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+# MODEL_ID = "mistralai/Mistral-7B-v0.1"
+MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
 @dataclass
 class Config(simple_parsing.Serializable):
+    model_id: str = MODEL_ID
     resume_from_checkpoint: str = LAST_CHECKPOINT
     torch_compile: bool = False
-    batch_size: int = 1
+    batch_size: int = 2
     learning_rate: float = 1e-4
-    gradient_accumulation_steps: int = 16
-    n_layers: int = None
-    n_freeze: int = 24
+    gradient_accumulation_steps: int = 8
+    n_layers: int = 12
+    n_freeze: int = None
     test_size: float = 0.05
     seed: int = 42
     max_seq_length: int = 1024
@@ -39,7 +40,7 @@ class Config(simple_parsing.Serializable):
     save: bool = True
     log_model: bool = True
     eval: bool = True
-    tag: str = "alpaca,baseline7b"
+    tags: str = "alpaca,12layers"
 
 config: Config = simple_parsing.parse(Config)
 
@@ -50,7 +51,7 @@ if accelerator.is_main_process:
                entity=ENTITY, 
                job_type="train", 
                config={"init_args": config},
-               tags=config.tag.split(","))
+               tags=config.tags.split(","))
     # estimation
     effective_batch_size = config.max_seq_length*config.batch_size*config.gradient_accumulation_steps*accelerator.num_processes
     print(f"\nTraining with an effective batch_size of: {effective_batch_size}\n")
@@ -63,7 +64,6 @@ if config.test_size>0:
 else:
     train_ds = ds
     test_ds = None
-
 
 output_dir = f"./models/mistral_7b_{config.n_layers}_layers"
 training_args = TrainingArguments(
@@ -89,7 +89,7 @@ training_args = TrainingArguments(
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
+        config.model_id,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
@@ -118,18 +118,18 @@ trainer = SFTTrainer(
 
 trainer.train(resume_from_checkpoint=config.resume_from_checkpoint)
 
-if config.eval:
-    trainer.evaluate()
-
 if config.save and accelerator.is_main_process:
     trainer.save_model(training_args.output_dir)
+
+if config.eval:
+    trainer.evaluate()
 
 if config.log_model and config.save and accelerator.is_main_process:
     print("Saving model as artifact to wandb")
     model_at = wandb.Artifact(
-        name = f"{wandb.run.id}_alpaca_{config.n_layers}_layers", 
+        name = f"mistral_7b_{config.n_layers}_layers-{wandb.run.id}", 
         type="model",
         description="Model trained on Alpaca GPT4 dataset",
-        metadata={"finetuned_from":config.model_id})
+        metadata=config )
     model_at.add_dir(training_args.output_dir)
     wandb.log_artifact(model_at)
