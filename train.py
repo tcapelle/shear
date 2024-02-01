@@ -12,7 +12,7 @@ from transformers import TrainingArguments, AutoModelForCausalLM, TrainerCallbac
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from trl import SFTTrainer
 
-from data import create_alpaca_prompt_with_response
+from data import create_alpaca_prompt_with_response, create_chatml_fromvalue
 from utils import freeze
 
 logging.basicConfig(level=logging.INFO)
