@@ -138,9 +138,9 @@ if config.eval:
 
 if config.log_model and config.save and accelerator.is_main_process:
     logging.info("Saving model as artifact to wandb")
+    model_name = config.model_id.split("/")[-1].replace("-", "_")
     model_at = wandb.Artifact(
-        model_name = config.model_id.split("/")[-1].replace("-", "_")
-        name = f"{ model_name}_{config.n_layers}_layers-{wandb.run.id}", 
+        name = f"{model_name}_{config.n_layers}_layers-{wandb.run.id}", 
         type="model",
         description="Model trained on Alpaca GPT4 dataset",
         metadata=config.to_dict())
