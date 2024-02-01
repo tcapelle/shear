@@ -72,6 +72,7 @@ else:
 output_dir = f"./models/mistral_7b_{config.n_layers}_layers"
 training_args = TrainingArguments(
     output_dir=output_dir,
+    report_to="wandb",
     per_device_train_batch_size=config.batch_size,
     per_device_eval_batch_size=config.batch_size,
     bf16=True,
