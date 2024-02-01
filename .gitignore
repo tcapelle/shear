@@ -1,5 +1,6 @@
 models/
 wandb/
+mlruns/
 artifacts/
 *egg*
 *cache*
