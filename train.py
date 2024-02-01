@@ -124,7 +124,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_id)
 # TODO: make configuration modular...
 tokenizer.pad_token = '<unk>' # '\0'
 tokenizer.add_bos_token = False
-tokenizer.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'assistant\n' }}{% endif %}"
+tokenizer.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'gpt\n' }}{% endif %}"
 
 formatting_func = create_chatml_fromvalue(tokenizer, key='conversations') if CHATML else create_alpaca_prompt_with_response
 
