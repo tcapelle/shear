@@ -22,12 +22,14 @@ ENTITY = "capecape"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 DATASET_NAME = "vicgalle/alpaca-gpt4"
 # MODEL_ID = "mistralai/Mistral-7B-v0.1"
-MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+MODEL_ID = "NousResearch/Llama-2-7b-hf"
+# MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
 @dataclass
 class Config(simple_parsing.Serializable):
     model_id: str = MODEL_ID
+    output_dir: str = None
     resume_from_checkpoint: str = LAST_CHECKPOINT
     torch_compile: bool = False
     batch_size: int = 2
@@ -42,7 +44,7 @@ class Config(simple_parsing.Serializable):
     num_train_epochs: int = 3
     save: bool = True
     log_model: bool = True
-    eval: bool = True
+    eval: bool = False
     tags: str = "alpaca,12layers"
 
 
@@ -69,9 +71,12 @@ else:
     train_ds = ds
     test_ds = None
 
-output_dir = f"./models/mistral_7b_{config.n_layers}_layers"
+if not config.output_dir:
+    model_name = config.model_id.split("/")[-1].replace("-", "_")
+    config.output_dir = f"./models/{model_name}_{config.n_layers}_layers_ft"
+
 training_args = TrainingArguments(
-    output_dir=output_dir,
+    output_dir=config.output_dir,
     report_to="wandb",
     per_device_train_batch_size=config.batch_size,
     per_device_eval_batch_size=config.batch_size,
@@ -87,7 +92,7 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=config.gradient_accumulation_steps,
     evaluation_strategy="no",
     # logging strategies
-    logging_dir=f"{output_dir}/logs",
+    logging_dir=f"{config.output_dir}/logs",
     logging_strategy="steps",
     logging_steps=1,
     save_strategy="no",
@@ -134,7 +139,8 @@ if config.eval:
 if config.log_model and config.save and accelerator.is_main_process:
     logging.info("Saving model as artifact to wandb")
     model_at = wandb.Artifact(
-        name = f"mistral_7b_{config.n_layers}_layers-{wandb.run.id}", 
+        model_name = config.model_id.split("/")[-1].replace("-", "_")
+        name = f"{ model_name}_{config.n_layers}_layers-{wandb.run.id}", 
         type="model",
         description="Model trained on Alpaca GPT4 dataset",
         metadata=config.to_dict())
