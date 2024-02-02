@@ -18,7 +18,7 @@ from utils import freeze
 logging.basicConfig(level=logging.INFO)
 
 WANDB_PROJECT = "shearllama"
-ENTITY = "capecape"
+ENTITY = "llm_surgery"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 # DATASET_NAME = "vicgalle/alpaca-gpt4"
 DATASET_SIZE = 50 # other options: 100 200
