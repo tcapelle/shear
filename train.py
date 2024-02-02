@@ -8,23 +8,27 @@ import torch.nn as nn
 
 from accelerate import Accelerator
 from datasets import load_dataset
-from transformers import TrainingArguments, AutoModelForCausalLM, TrainerCallback
+from transformers import TrainingArguments, AutoModelForCausalLM, AutoTokenizer
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from trl import SFTTrainer
 
-from data import create_alpaca_prompt_with_response
+from data import create_alpaca_prompt_with_response, create_chatml_fromvalue
 from utils import freeze
 
 logging.basicConfig(level=logging.INFO)
 
 WANDB_PROJECT = "shearllama"
-ENTITY = "capecape"
+ENTITY = "llm_surgery"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
-DATASET_NAME = "vicgalle/alpaca-gpt4"
+# DATASET_NAME = "vicgalle/alpaca-gpt4"
+DATASET_SIZE = 50 # other options: 100 200
+DATASET_NAME = f"typeof/OH-2.5-{DATASET_SIZE}k"
 # MODEL_ID = "mistralai/Mistral-7B-v0.1"
-MODEL_ID = "NousResearch/Llama-2-7b-hf"
-# MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+# MODEL_ID = "NousResearch/Llama-2-7b-hf"
+MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
+
+CHATML = True
 
 @dataclass
 class Config(simple_parsing.Serializable):
@@ -72,8 +76,7 @@ else:
     test_ds = None
 
 if not config.output_dir:
-    model_name = config.model_id.split("/")[-1].replace("-", "_")
-    config.output_dir = f"./models/{model_name}_{config.n_layers}_layers_ft"
+    config.output_dir = f"./models/model_{config.n_layers}_layers_ft"
 
 training_args = TrainingArguments(
     output_dir=config.output_dir,
@@ -101,7 +104,7 @@ training_args = TrainingArguments(
 model = AutoModelForCausalLM.from_pretrained(
         config.model_id,
         trust_remote_code=True,
-        low_cpu_mem_usage=True,
+        low_cpu_mem_usage=False,
         torch_dtype=torch.bfloat16,
         use_cache=False,
         use_flash_attention_2=True,
@@ -115,12 +118,35 @@ if config.n_layers:
 if config.n_freeze:
     freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
 
+if CHATML:
+    # 💭 perhaps we move this config ugliness somewhere else ?
+    # TODO: make configuration modular...
+    chat_template = (
+        "{% if not add_generation_prompt is defined %}"
+        "{% set add_generation_prompt = false %}{% endif %}"
+        "{% for message in messages %}"
+        "{{bos_token + message['from'] + '\n' + message['value'] + eos_token + '\n'}}"
+        "{% endfor %}{% if add_generation_prompt %}{{ bos_token + 'assistant\n' }}{% endif %}"
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_id,
+        pad_token='<unk>', # change for non llama/mistral tokenizers
+        add_bos_token=False,
+        chat_template=chat_template,
+    )
+else:
+    tokenizer = AutoTokenizer.from_pretrained(config.model_id)
+    
+formatting_func = create_chatml_fromvalue(tokenizer) if CHATML else create_alpaca_prompt_with_response
+
 
 trainer = SFTTrainer(
     model,
+    tokenizer=tokenizer,
     train_dataset=train_ds,
     eval_dataset=test_ds,
-    formatting_func=create_alpaca_prompt_with_response,
+    formatting_func=formatting_func,
     max_seq_length=config.max_seq_length,
     packing=True,
     args=training_args,
@@ -140,7 +166,7 @@ if config.log_model and config.save and accelerator.is_main_process:
     logging.info("Saving model as artifact to wandb")
     model_name = config.model_id.split("/")[-1].replace("-", "_")
     model_at = wandb.Artifact(
-        name = f"{model_name}_{config.n_layers}_layers-{wandb.run.id}", 
+        name = f"model_{config.n_layers}_layers-{wandb.run.id}", 
         type="model",
         description="Model trained on Alpaca GPT4 dataset",
         metadata=config.to_dict())
