@@ -28,17 +28,17 @@ DATASET_NAME = f"typeof/OH-2.5-{DATASET_SIZE}k"
 MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
 LAST_CHECKPOINT = None
 
-CHATML = True
-
 @dataclass
 class Config(simple_parsing.Serializable):
     model_id: str = MODEL_ID
+    dataset: str = DATASET_NAME
+    prompt_format: str = "chatml"  # alpaca or chatml
     output_dir: str = None
     resume_from_checkpoint: str = LAST_CHECKPOINT
     torch_compile: bool = False
     batch_size: int = 2
     learning_rate: float = 1e-4
-    gradient_accumulation_steps: int = 8
+    gradient_accumulation_steps: int = 8  # let's keep an effective batch size of 16 (2 x 8), (4 x 4), (8 x 2)
     n_layers: int = 12
     n_freeze: int = None
     test_size: float = 0.05
@@ -49,7 +49,7 @@ class Config(simple_parsing.Serializable):
     save: bool = True
     log_model: bool = True
     eval: bool = False
-    tags: str = "alpaca,12layers"
+    tags: str = ""
 
 
 config: Config = simple_parsing.parse(Config)
@@ -111,6 +111,8 @@ model = AutoModelForCausalLM.from_pretrained(
         )
 
 # Chop the model down to n_layers
+# this is not needed if you pass an already pruned model
+# check `create_small_model.py` to see how to prune a model
 if config.n_layers: 
     model.model.layers = model.model.layers[:config.n_layers]
 
@@ -118,7 +120,7 @@ if config.n_layers:
 if config.n_freeze:
     freeze(model, freeze_embed=True, n_freeze=config.n_freeze, module_name="layers")
 
-if CHATML:
+if config.prompt_format == "chatml":
     # 💭 perhaps we move this config ugliness somewhere else ?
     # TODO: make configuration modular...
     chat_template = (
@@ -135,10 +137,12 @@ if CHATML:
         add_bos_token=False,
         chat_template=chat_template,
     )
+    formatting_func = create_chatml_fromvalue(tokenizer)
 else:
+    # TODO use the tokenizer chat_template for alpaca
+    # and move to data.py
     tokenizer = AutoTokenizer.from_pretrained(config.model_id)
-    
-formatting_func = create_chatml_fromvalue(tokenizer) if CHATML else create_alpaca_prompt_with_response
+    formatting_func = create_alpaca_prompt_with_response
 
 
 trainer = SFTTrainer(
