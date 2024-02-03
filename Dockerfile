@@ -13,4 +13,6 @@ COPY requirements.txt .
 
 RUN python -m pip install -r requirements.txt
 
+ENV NCCL_P2P_DISABLE 1
+
 ENTRYPOINT ["/bin/bash"]
