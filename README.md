@@ -55,3 +55,8 @@ accelerate launch train.py --model_id ./models/mistral_7b_8_layers_start \
   --max_steps 800
 ```
 
+## TODOs
+- Maybe move the prompt formating logic to data.py
+- Make the `train.py` launch compatible (this requires loading the config on non-rank0 processes...😭)
+- Improve naming of stuff, myabe @morg has some ideas?
+
