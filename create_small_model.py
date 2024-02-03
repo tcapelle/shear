@@ -17,6 +17,7 @@ class Config(simple_parsing.Serializable):
     n_layers: int = 12
     save_tokenizer: bool = True
     device_map: str = "cuda:0"
+    random: bool = False
     log: bool = True
 
 config: Config = simple_parsing.parse(Config)
@@ -25,11 +26,15 @@ model_config = AutoConfig.from_pretrained(config.model_id)
 model_config.num_hidden_layers = config.n_layers
 logging.info(model_config)
 
-model = AutoModelForCausalLM.from_pretrained(
-    config.model_id, 
-    config=model_config, 
-    torch_dtype='auto',
-    device_map=config.device_map)
+if not config.random:
+    model = AutoModelForCausalLM.from_pretrained(
+        config.model_id, 
+        config=model_config, 
+        torch_dtype='auto',
+        device_map=config.device_map)
+else:
+    model = AutoModelForCausalLM.from_config(model_config)
+    model.init_weights()
 
 logging.info(f"Total model Parameters: {(model.num_parameters()/1e6):.2f}M")
 
