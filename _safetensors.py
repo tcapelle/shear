@@ -89,7 +89,7 @@ def dl_file_from_repo(repo_id: str, repo_file: str, base_dir: str='.'):
     )
 
 
-def split_repo(from_repo: str, to_repo: str=):
+def split_repo(from_repo: str, to_repo: str):
     """
     usage: split_repo('152334H/miqu-1-70b-sf', 'typeof/miqu-70b-split')
     will split from_repo and place into to_repo.
