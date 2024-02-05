@@ -207,7 +207,7 @@ def build_model_from(model_id: str='typeof/mistral-7b-sharded', num_layers: int=
 
     remapped_index = {k: index_map[v] for k, v in sliced_index.items()}
     with open(index_path, 'w') as f:
-        json.dump(remapped_index, f, indent=2)
+        json.dump({'metadata': '', 'weight_map': remapped_index}, f, indent=2)
 
     config_path = out_dir / 'config.json'
     temp_config = json.load(open(config_path, 'r'))
