@@ -12,21 +12,28 @@ from transformers import TrainingArguments, AutoModelForCausalLM, AutoTokenizer
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from trl import SFTTrainer
 
-from data import create_alpaca_prompt_with_response, create_chatml_fromvalue
+from data import create_alpaca_prompt_with_response, create_chatml_fromvalue, basic
 from utils import freeze
 
 logging.basicConfig(level=logging.INFO)
 
 WANDB_PROJECT = "shearllama"
 ENTITY = "llm_surgery"
+
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 # DATASET_NAME = "vicgalle/alpaca-gpt4"
-DATASET_SIZE = 50 # other options: 100 200
-DATASET_NAME = f"typeof/OH-2.5-{DATASET_SIZE}k"
+
+# DATASET_SIZE = 50 # other options: 100 200
+# DATASET_NAME = f"typeof/OH-2.5-{DATASET_SIZE}k"
+
+DATASET_NAME = 'typeof/arc'
+
 # MODEL_ID = "mistralai/Mistral-7B-v0.1"
 # MODEL_ID = "NousResearch/Llama-2-7b-hf"
 MODEL_ID = "./models/mistral_7b_12_layers_start"  # only first 12 layers of Mistral 7B
+
 LAST_CHECKPOINT = None
+
 
 @dataclass
 class Config(simple_parsing.Serializable):
@@ -66,6 +73,7 @@ if accelerator.is_main_process:
     effective_batch_size = config.max_seq_length*config.batch_size*config.gradient_accumulation_steps*accelerator.num_processes
     logging.info(f"\nTraining with an effective batch_size of: {effective_batch_size}\n")
 
+
 ds = load_dataset(DATASET_NAME)["train"].shuffle(seed=config.seed)
 if config.test_size>0:
     ds = ds.train_test_split(test_size=config.test_size)
@@ -102,13 +110,13 @@ training_args = TrainingArguments(
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-        config.model_id,
-        trust_remote_code=True,
-        low_cpu_mem_usage=False,
-        torch_dtype=torch.bfloat16,
-        use_cache=False,
-        use_flash_attention_2=True,
-        )
+    config.model_id,
+    trust_remote_code=True,
+    low_cpu_mem_usage=False,
+    torch_dtype=torch.bfloat16,
+    use_cache=False,
+    use_flash_attention_2=True,
+)
 
 # Chop the model down to n_layers
 # this is not needed if you pass an already pruned model
@@ -138,6 +146,13 @@ if config.prompt_format == "chatml":
         chat_template=chat_template,
     )
     formatting_func = create_chatml_fromvalue(tokenizer)
+elif config.prompt_format == 'arc':
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_id
+        pad_token='<unk>',
+        add_bos_token=False,
+    )
+    formatting_func = basic  # ensures `special_tokens` are properly set
 else:
     # TODO use the tokenizer chat_template for alpaca
     # and move to data.py
