@@ -12,7 +12,7 @@ from transformers import TrainingArguments, AutoModelForCausalLM, AutoTokenizer
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from trl import SFTTrainer
 
-from data import create_alpaca_prompt_with_response, create_chatml_fromvalue, basic
+from data import create_alpaca_prompt_with_response, create_chatml_fromvalue, basic_format
 from utils import freeze
 
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +39,7 @@ LAST_CHECKPOINT = None
 class Config(simple_parsing.Serializable):
     model_id: str = MODEL_ID
     dataset: str = DATASET_NAME
-    prompt_format: str = "chatml"  # alpaca or chatml
+    prompt_format: str = "chatml"  # alpaca, chatml, or basic
     output_dir: str = None
     resume_from_checkpoint: str = LAST_CHECKPOINT
     torch_compile: bool = False
@@ -146,13 +146,13 @@ if config.prompt_format == "chatml":
         chat_template=chat_template,
     )
     formatting_func = create_chatml_fromvalue(tokenizer)
-elif config.prompt_format == 'arc':
+elif config.prompt_format == 'basic':
     tokenizer = AutoTokenizer.from_pretrained(
         config.model_id
         pad_token='<unk>',
         add_bos_token=False,
     )
-    formatting_func = basic  # ensures `special_tokens` are properly set
+    formatting_func = basic_format(tokenizer)  # ensures `special_tokens` are properly set
 else:
     # TODO use the tokenizer chat_template for alpaca
     # and move to data.py
