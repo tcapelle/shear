@@ -18,6 +18,7 @@ from utils import freeze
 logging.basicConfig(level=logging.INFO)
 
 WANDB_PROJECT = "shearllama"
+WANDB_RUN_NAME = None
 ENTITY = "llm_surgery"
 # DATASET_NAME = "togethercomputer/RedPajama-Data-1T-Sample"
 # DATASET_NAME = "vicgalle/alpaca-gpt4"
@@ -38,6 +39,7 @@ class Config(simple_parsing.Serializable):
     torch_compile: bool = False
     batch_size: int = 2
     learning_rate: float = 1e-4
+    optim: str = "adamw_torch"
     gradient_accumulation_steps: int = 8  # let's keep an effective batch size of 16 (2 x 8), (4 x 4), (8 x 2)
     n_layers: int = 12
     n_freeze: int = None
@@ -50,6 +52,7 @@ class Config(simple_parsing.Serializable):
     log_model: bool = True
     eval: bool = False
     tags: str = ""
+    name: str = WANDB_RUN_NAME
 
 
 config: Config = simple_parsing.parse(Config)
@@ -59,6 +62,7 @@ accelerator = Accelerator()
 if accelerator.is_main_process:
     wandb.init(project=WANDB_PROJECT, 
                entity=ENTITY, 
+               name=config.name,
                job_type="train", 
                config={"init_args": config},
                tags=config.tags.split(","))
@@ -89,6 +93,7 @@ training_args = TrainingArguments(
     torch_compile=config.torch_compile,
     learning_rate=config.learning_rate,
     lr_scheduler_type="cosine",
+    optim=config.optim,
     warmup_ratio=0.1,
     max_steps=config.max_steps,
     num_train_epochs=config.num_train_epochs,
@@ -110,6 +115,8 @@ model = AutoModelForCausalLM.from_pretrained(
         use_flash_attention_2=True,
         )
 
+logging.info(f"Model loaded from {config.model_id}")
+logging.info(f"Model Parameters: {model.num_parameters() / 1e9:.2f}B")
 # Chop the model down to n_layers
 # this is not needed if you pass an already pruned model
 # check `create_small_model.py` to see how to prune a model
