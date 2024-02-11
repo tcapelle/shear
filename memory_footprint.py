@@ -27,7 +27,7 @@ class MemoryCallback(WandbCallback):
 
     def on_step_end(self, args, state, control, **kwargs):
         memory_stats = torch.cuda.memory_stats()
-        wandb.log(torch.cuda.memory_stats())
+        wandb.log(memory_stats)
         wandb.log({"max_memory_allocated [GB]": memory_stats["allocated_bytes.all.peak"]/1e9})
 
 @dataclass
