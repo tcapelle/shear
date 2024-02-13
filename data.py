@@ -20,3 +20,8 @@ def create_chatml_fromvalue(tokenizer, key='conversations'):
     def apply_template(x):
         return tokenizer.apply_chat_template(x[key], add_generation_prompt=False, tokenize=False)
     return apply_template
+
+def basic_format(tokenizer, key='text'):
+    # instead of depending on config.add_bos_token etc..,
+    # ensures special tokens are properly set
+    return lambda x: f'{tokenizer.bos_token}{x[key]}{tokenizer.eos_token}'
