@@ -66,15 +66,18 @@ if config.save_tokenizer:
     tokenizer.save_pretrained(config.output_name)
 
 if config.log:
+    model_name = config.output_name.split("/")[-1]
     wandb.init(project=WANDB_PROJECT, 
                entity=ENTITY, 
                job_type="prune_model", 
+               name=model_name,
+               group=model_name,
                config=config.to_dict())
     logging.info("Saving model as artifact to wandb")
     model_at = wandb.Artifact(
-        name = config.output_name.split("/")[-1], 
+        name = model_name, 
         type="model",
-        description=f"Baseline pruned model with {config.layer_ids} layers.",
+        description=f"Baseline pruned model with [{config.layer_ids}] layers.",
         metadata=config.to_dict())
     model_at.add_dir(config.output_name)
-    wandb.log_artifact(model_at)
+    wandb.log_artifact(model_at, aliases=["start"])
