@@ -7,3 +7,4 @@ datasets
 evaluate
 trl>=0.7
 simple_parsing
+tqdm

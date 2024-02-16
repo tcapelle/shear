@@ -1,4 +1,5 @@
 import wandb
+from tqdm.auto import tqdm
 from dataclasses import dataclass, field
 import simple_parsing
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
@@ -44,7 +45,7 @@ if config.random:
 else:
     name_mapping = map_state_dict(original_model, config.layer_ids)
     # Manually copy weights and biases
-    for old_name, new_name in name_mapping.items():
+    for old_name, new_name in tqdm(name_mapping.items()):
         # Check if the mapped name exists in the new model's state_dict
         if new_name in new_model.state_dict():
             # Directly load the parameter from the old model to the new model based on the mapping
